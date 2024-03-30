@@ -14,7 +14,7 @@ fi
 echo "Ok you got the first answer right. One more question? Do you live, laugh, love github? Answer by typing Y or N"
 read $CHOICE2
 if [ $CHOICE2 -eq "N" ]
-	then 
+	then
 	echo "('-') Wrong Choice"
 	exit
 else 
