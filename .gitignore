@@ -1,1 +1,8 @@
 .env
+__pycache__/
+*.pyc
+*.db
+.superpowers/
+.blender-toolkit/
+.plugin-config/
+.project-structure.md
