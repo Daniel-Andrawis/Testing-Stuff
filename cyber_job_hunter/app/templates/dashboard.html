@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CyberRank{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.5rem; margin-bottom:0.5rem;">Welcome, {{ user.email }}</h1>
+<p class="text-dim">Your CyberRank portal. Full dashboard coming in Phase 2.</p>
+
+<div class="stats-grid mt-2">
+    <div class="card stat-card">
+        <div class="stat-label">Match Score</div>
+        <div class="stat-value text-dim">—</div>
+        <div class="stat-sub">Complete your profile to see scores</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-label">Jobs Tracked</div>
+        <div class="stat-value text-dim">0</div>
+        <div class="stat-sub">Jobs load after first scrape</div>
+    </div>
+</div>
+
+<div class="mt-2">
+    <a href="/profile/setup" class="btn btn-primary">Set Up Profile</a>
+</div>
+{% endblock %}

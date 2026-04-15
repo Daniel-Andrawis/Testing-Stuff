@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Login — CyberRank{% endblock %}
+
+{% block content %}
+<div style="max-width:400px; margin:3rem auto;">
+    <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">Welcome back</h1>
+    <p class="text-dim mb-2">Log in to your CyberRank portal.</p>
+
+    {% if error %}
+    <div class="card" style="border-color:var(--red); margin-bottom:1rem;">
+        <p style="color:var(--red); font-size:0.875rem;">{{ error }}</p>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/auth/login" class="card">
+        <div class="form-group">
+            <label for="username">Email</label>
+            <input type="email" id="username" name="username" class="form-input" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-input" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Log In</button>
+    </form>
+
+    <p class="text-dim mt-2" style="text-align:center; font-size:0.85rem;">
+        Don't have an account? <a href="/register" class="text-accent">Sign up</a>
+    </p>
+</div>
+{% endblock %}

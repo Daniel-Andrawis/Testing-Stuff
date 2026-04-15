@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — CyberRank{% endblock %}
+
+{% block content %}
+<div style="max-width:400px; margin:3rem auto;">
+    <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">Create your account</h1>
+    <p class="text-dim mb-2">Start matching against cybersecurity jobs.</p>
+
+    {% if error %}
+    <div class="card" style="border-color:var(--red); margin-bottom:1rem;">
+        <p style="color:var(--red); font-size:0.875rem;">{{ error }}</p>
+    </div>
+    {% endif %}
+
+    <form id="register-form" class="card">
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" class="form-input" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-input" minlength="8" required>
+        </div>
+        <div class="form-group">
+            <label for="password_confirm">Confirm Password</label>
+            <input type="password" id="password_confirm" class="form-input" minlength="8" required>
+        </div>
+        <div id="register-error" style="display:none; color:var(--red); font-size:0.85rem; margin-bottom:0.75rem;"></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Create Account</button>
+    </form>
+
+    <p class="text-dim mt-2" style="text-align:center; font-size:0.85rem;">
+        Already have an account? <a href="/login" class="text-accent">Log in</a>
+    </p>
+</div>
+
+<script>
+document.getElementById('register-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('register-error');
+    errEl.style.display = 'none';
+
+    const pw = document.getElementById('password').value;
+    if (pw !== document.getElementById('password_confirm').value) {
+        errEl.textContent = 'Passwords do not match.';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    const resp = await fetch('/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            email: document.getElementById('email').value,
+            password: pw,
+        }),
+    });
+
+    if (resp.ok) {
+        const formData = new FormData();
+        formData.append('username', document.getElementById('email').value);
+        formData.append('password', pw);
+        const loginResp = await fetch('/auth/login', { method: 'POST', body: formData });
+        if (loginResp.ok) {
+            window.location.href = '/profile/setup';
+        } else {
+            window.location.href = '/login';
+        }
+    } else {
+        const data = await resp.json();
+        errEl.textContent = data.detail || 'Registration failed.';
+        errEl.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}
