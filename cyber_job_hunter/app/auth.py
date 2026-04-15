@@ -24,7 +24,11 @@ async def get_user_manager(user_db=Depends(get_user_db)):
     yield UserManager(user_db)
 
 
-cookie_transport = CookieTransport(cookie_name="cyberrank", cookie_max_age=3600 * 24 * 7)
+cookie_transport = CookieTransport(
+    cookie_name="cyberrank",
+    cookie_max_age=3600 * 24 * 7,
+    cookie_secure=False,  # Set True in production with HTTPS
+)
 
 
 def get_jwt_strategy() -> JWTStrategy:

@@ -3,100 +3,92 @@
 
 {% block content %}
 <div style="max-width:700px; margin:0 auto;">
-    <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">{% if profile %}Edit Your Profile{% else %}Set Up Your Profile{% endif %}</h1>
-    <p class="text-dim mb-2">{% if profile %}Update your skills and experience.{% else %}Tell us about your background to start matching.{% endif %}</p>
+    <div class="section-header" style="justify-content:flex-start;">
+        <h1>{% if profile %}Edit Profile{% else %}Profile Setup{% endif %}</h1>
+    </div>
+    <p class="text-dim mb-2" style="font-size:0.88rem;">{% if profile %}Update your skills and experience.{% else %}Build your profile to start matching against jobs.{% endif %}</p>
 
-    <!-- Resume Upload -->
     {% if not profile %}
-    <div class="card mb-2">
-        <h3 style="font-size:0.95rem; margin-bottom:0.5rem;">Quick Start: Upload Resume</h3>
-        <p class="text-dim" style="font-size:0.8rem; margin-bottom:0.75rem;">Upload a PDF or DOCX to auto-fill the form below.</p>
+    <div class="card mb-2" style="border-color: var(--cyan-dim);">
+        <h3 style="margin-bottom:0.4rem; font-size:0.88rem;">Quick Start: Upload Resume</h3>
+        <p class="text-muted" style="font-size:0.78rem; margin-bottom:0.75rem;">Upload a PDF or DOCX to auto-fill the form.</p>
         <form id="upload-form" enctype="multipart/form-data" style="display:flex; gap:0.5rem; align-items:center;">
             <input type="file" name="file" accept=".pdf,.docx,.doc" class="form-input" style="flex:1;">
             <button type="submit" class="btn btn-sm btn-primary">Parse</button>
         </form>
-        <div id="upload-status" class="text-dim" style="font-size:0.8rem; margin-top:0.5rem;"></div>
+        <div id="upload-status" class="text-muted" style="font-size:0.78rem; margin-top:0.5rem; font-family:var(--font-mono);"></div>
     </div>
     {% endif %}
 
-    <!-- Profile Form -->
     <form method="POST" action="/profile/setup" class="card">
         <div class="form-group">
             <label for="name">Full Name</label>
-            <input type="text" id="name" name="name" class="form-input"
+            <input type="text" id="name" name="name" class="form-input" placeholder="Your name"
                    value="{{ profile.name if profile else '' }}">
         </div>
 
         <div class="form-group">
-            <label for="skills">Skills (comma-separated)</label>
+            <label for="skills">Skills <span class="text-muted" style="text-transform:none; letter-spacing:0;">(comma-separated)</span></label>
             <input type="text" id="skills" name="skills" class="form-input"
                    value="{{ ', '.join(profile.skills) if profile and profile.skills else '' }}"
                    placeholder="Python, SIEM, CrowdStrike, Incident Response...">
-            <div class="text-dim" style="font-size:0.7rem; margin-top:0.25rem;">
-                Start typing to see suggestions from our {{ all_skills|length }} skill database
-            </div>
         </div>
 
         <div class="form-group">
-            <label for="certifications">Certifications (comma-separated)</label>
+            <label for="certifications">Certifications</label>
             <input type="text" id="certifications" name="certifications" class="form-input"
                    value="{{ ', '.join(profile.certifications) if profile and profile.certifications else '' }}"
                    placeholder="CompTIA Security+, CISSP, CEH...">
         </div>
 
         <div class="form-group">
-            <label for="experience_keywords">Experience Keywords (comma-separated)</label>
+            <label for="experience_keywords">Experience Keywords</label>
             <input type="text" id="experience_keywords" name="experience_keywords" class="form-input"
                    value="{{ ', '.join(profile.experience_keywords) if profile and profile.experience_keywords else '' }}"
                    placeholder="threat detection, incident response, SIEM, EDR...">
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.875rem;">
             <div class="form-group">
                 <label for="edu_degree">Degree</label>
-                <input type="text" id="edu_degree" name="edu_degree" class="form-input"
-                       value="{{ profile.education.degree if profile and profile.education else '' }}"
-                       placeholder="Bachelor of Science">
+                <input type="text" id="edu_degree" name="edu_degree" class="form-input" placeholder="Bachelor of Science"
+                       value="{{ profile.education.degree if profile and profile.education else '' }}">
             </div>
             <div class="form-group">
                 <label for="edu_major">Major</label>
-                <input type="text" id="edu_major" name="edu_major" class="form-input"
-                       value="{{ profile.education.major if profile and profile.education else '' }}"
-                       placeholder="Digital Forensics">
+                <input type="text" id="edu_major" name="edu_major" class="form-input" placeholder="Digital Forensics"
+                       value="{{ profile.education.major if profile and profile.education else '' }}">
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.875rem;">
             <div class="form-group">
                 <label for="edu_minor">Minor</label>
-                <input type="text" id="edu_minor" name="edu_minor" class="form-input"
-                       value="{{ profile.education.minor if profile and profile.education else '' }}"
-                       placeholder="Cyber Security">
+                <input type="text" id="edu_minor" name="edu_minor" class="form-input" placeholder="Cyber Security"
+                       value="{{ profile.education.minor if profile and profile.education else '' }}">
             </div>
             <div class="form-group">
                 <label for="edu_school">School</label>
-                <input type="text" id="edu_school" name="edu_school" class="form-input"
-                       value="{{ profile.education.school if profile and profile.education else '' }}"
-                       placeholder="University name">
+                <input type="text" id="edu_school" name="edu_school" class="form-input" placeholder="University name"
+                       value="{{ profile.education.school if profile and profile.education else '' }}">
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.875rem;">
             <div class="form-group">
-                <label for="years_experience">Years of Experience</label>
+                <label for="years_experience">Years Experience</label>
                 <input type="number" id="years_experience" name="years_experience" class="form-input"
                        value="{{ profile.years_experience if profile else 0 }}" min="0">
             </div>
             <div class="form-group">
-                <label for="languages">Languages (comma-separated)</label>
-                <input type="text" id="languages" name="languages" class="form-input"
-                       value="{{ ', '.join(profile.languages) if profile and profile.languages else '' }}"
-                       placeholder="English, Russian...">
+                <label for="languages">Languages</label>
+                <input type="text" id="languages" name="languages" class="form-input" placeholder="English, Russian..."
+                       value="{{ ', '.join(profile.languages) if profile and profile.languages else '' }}">
             </div>
         </div>
 
         <div class="form-group">
-            <label for="target_companies">Target Companies (comma-separated)</label>
+            <label for="target_companies">Target Companies</label>
             <input type="text" id="target_companies" name="target_companies" class="form-input"
                    value="{{ ', '.join(profile.target_companies) if profile and profile.target_companies else '' }}"
                    placeholder="CrowdStrike, SpaceX, CISA, FBI...">
@@ -104,42 +96,38 @@
 
         <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
             <input type="checkbox" id="clearance_eligible" name="clearance_eligible" value="true"
-                   {% if profile and profile.clearance_eligible %}checked{% endif %}>
-            <label for="clearance_eligible" style="margin-bottom:0;">Clearance eligible</label>
+                   {% if profile and profile.clearance_eligible %}checked{% endif %}
+                   style="accent-color:var(--cyan); width:16px; height:16px;">
+            <label for="clearance_eligible" style="margin-bottom:0; text-transform:none; letter-spacing:0; font-family:var(--font-body); font-size:0.85rem; color:var(--text);">Clearance eligible</label>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">
-            {% if profile %}Update Profile{% else %}Save & Start Matching{% endif %}
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.75rem; padding:0.65rem;">
+            {% if profile %}Update Profile{% else %}Save &amp; Start Matching{% endif %}
         </button>
     </form>
 </div>
 
 <script>
-// Resume upload handler
 const uploadForm = document.getElementById('upload-form');
 if (uploadForm) {
     uploadForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const status = document.getElementById('upload-status');
         const fileInput = this.querySelector('input[type="file"]');
-        if (!fileInput.files.length) { status.textContent = 'Select a file first.'; return; }
-
-        status.textContent = 'Parsing resume...';
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        const resp = await fetch('/api/parse-resume', { method: 'POST', body: formData });
-        if (!resp.ok) { status.textContent = 'Parse failed. Fill in manually.'; return; }
-
+        if (!fileInput.files.length) { status.textContent = '> select a file first'; return; }
+        status.textContent = '> parsing resume...';
+        status.style.color = 'var(--amber)';
+        const fd = new FormData();
+        fd.append('file', fileInput.files[0]);
+        const resp = await fetch('/api/parse-resume', { method: 'POST', body: fd });
+        if (!resp.ok) { status.textContent = '> parse failed — fill in manually'; status.style.color = 'var(--red)'; return; }
         const data = await resp.json();
-        if (data.skills && data.skills.length) document.getElementById('skills').value = data.skills.join(', ');
-        if (data.certifications && data.certifications.length) document.getElementById('certifications').value = data.certifications.join(', ');
-        if (data.experience_keywords && data.experience_keywords.length) document.getElementById('experience_keywords').value = data.experience_keywords.join(', ');
-        if (data.education) {
-            if (data.education.degree) document.getElementById('edu_degree').value = data.education.degree;
-            if (data.education.major) document.getElementById('edu_major').value = data.education.major;
-        }
-        status.textContent = 'Resume parsed! Review and edit below, then save.';
+        if (data.skills?.length) document.getElementById('skills').value = data.skills.join(', ');
+        if (data.certifications?.length) document.getElementById('certifications').value = data.certifications.join(', ');
+        if (data.experience_keywords?.length) document.getElementById('experience_keywords').value = data.experience_keywords.join(', ');
+        if (data.education?.degree) document.getElementById('edu_degree').value = data.education.degree;
+        if (data.education?.major) document.getElementById('edu_major').value = data.education.major;
+        status.textContent = '> parsed — review and save below';
         status.style.color = 'var(--green)';
     });
 }

@@ -2,30 +2,43 @@
 {% block title %}Login — CyberRank{% endblock %}
 
 {% block content %}
-<div style="max-width:400px; margin:3rem auto;">
-    <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">Welcome back</h1>
-    <p class="text-dim mb-2">Log in to your CyberRank portal.</p>
+<div class="auth-container">
+    <h1>Welcome back</h1>
+    <p class="text-dim" style="font-size:0.88rem;">Access your CyberRank portal.</p>
 
-    {% if error %}
-    <div class="card" style="border-color:var(--red); margin-bottom:1rem;">
-        <p style="color:var(--red); font-size:0.875rem;">{{ error }}</p>
-    </div>
-    {% endif %}
-
-    <form method="POST" action="/auth/login" class="card">
+    <form id="login-form" class="card">
         <div class="form-group">
             <label for="username">Email</label>
-            <input type="email" id="username" name="username" class="form-input" required>
+            <input type="email" id="username" name="username" class="form-input" placeholder="you@example.com" required>
         </div>
         <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" class="form-input" required>
+            <input type="password" id="password" name="password" class="form-input" placeholder="Your password" required>
         </div>
+        <div id="login-error" style="display:none; color:var(--red); font-size:0.82rem; margin-bottom:0.75rem; font-family:var(--font-mono);"></div>
         <button type="submit" class="btn btn-primary" style="width:100%;">Log In</button>
     </form>
 
-    <p class="text-dim mt-2" style="text-align:center; font-size:0.85rem;">
-        Don't have an account? <a href="/register" class="text-accent">Sign up</a>
+    <p class="text-dim mt-2" style="text-align:center; font-size:0.82rem;">
+        No account? <a href="/register" class="text-cyan" style="text-decoration:none;">Create one</a>
     </p>
 </div>
+
+<script>
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+    const fd = new FormData();
+    fd.append('username', document.getElementById('username').value);
+    fd.append('password', document.getElementById('password').value);
+    const resp = await fetch('/auth/login', { method: 'POST', body: fd });
+    if (resp.ok || resp.status === 204) {
+        window.location.href = '/dashboard';
+    } else {
+        errEl.textContent = 'Invalid email or password.';
+        errEl.style.display = 'block';
+    }
+});
+</script>
 {% endblock %}

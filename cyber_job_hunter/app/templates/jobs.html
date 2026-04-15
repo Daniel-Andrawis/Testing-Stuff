@@ -2,91 +2,87 @@
 {% block title %}Jobs — CyberRank{% endblock %}
 
 {% block content %}
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-    <h1 style="font-size:1.5rem;">Job Browser</h1>
-    <span class="text-dim" style="font-size:0.85rem;">{{ total }} jobs matched</span>
+<div class="section-header">
+    <h1>Job Browser</h1>
+    <span class="text-mono text-dim" style="font-size:0.78rem;">{{ total }} results</span>
 </div>
 
 <!-- Filters -->
-<form method="GET" action="/jobs" style="display:flex; gap:0.75rem; margin-bottom:1.5rem; flex-wrap:wrap;">
-    <select name="source" class="form-input" style="width:auto; min-width:120px;">
+<form method="GET" action="/jobs" class="filter-bar">
+    <select name="source" class="form-input">
         <option value="">All Sources</option>
         {% for s in sources %}
         <option value="{{ s }}" {% if s == current_source %}selected{% endif %}>{{ s }}</option>
         {% endfor %}
     </select>
-    <select name="min_score" class="form-input" style="width:auto; min-width:120px;">
+    <select name="min_score" class="form-input">
         <option value="0" {% if current_min_score == 0 %}selected{% endif %}>Any Score</option>
         <option value="40" {% if current_min_score == 40 %}selected{% endif %}>40+</option>
         <option value="60" {% if current_min_score == 60 %}selected{% endif %}>60+</option>
         <option value="70" {% if current_min_score == 70 %}selected{% endif %}>70+</option>
         <option value="80" {% if current_min_score == 80 %}selected{% endif %}>80+</option>
     </select>
-    <select name="sort" class="form-input" style="width:auto; min-width:120px;">
+    <select name="sort" class="form-input">
         <option value="score" {% if current_sort == 'score' %}selected{% endif %}>By Score</option>
         <option value="date" {% if current_sort == 'date' %}selected{% endif %}>By Date</option>
         <option value="salary" {% if current_sort == 'salary' %}selected{% endif %}>By Salary</option>
     </select>
-    <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+    <button type="submit" class="btn btn-sm btn-primary">Filter</button>
 </form>
 
 <!-- Job List -->
 {% for match, job in jobs %}
-<div class="card" style="margin-bottom:0.75rem; padding:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div style="flex:1;">
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
-                <span style="font-weight:600; font-size:0.95rem;">{{ job.title }}</span>
-                <span class="score-badge {% if match.total_score >= 70 %}score-high{% elif match.total_score >= 40 %}score-mid{% else %}score-low{% endif %}">
-                    {{ "%.1f"|format(match.total_score) }}
-                </span>
-            </div>
-            <div class="text-dim" style="font-size:0.8rem; margin-bottom:0.5rem;">
-                {{ job.organization }}{% if job.department %} ({{ job.department }}){% endif %} · {{ job.location }}
-                {% if job.salary_min != 'N/A' %} · ${{ job.salary_min }} - ${{ job.salary_max }}{% endif %}
-            </div>
-            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
-                <span class="text-dim" style="font-size:0.7rem; background:var(--bg); padding:1px 6px; border-radius:4px;">{{ job.source }}</span>
-                {% if job.open_date != 'N/A' %}
-                <span class="text-dim" style="font-size:0.7rem;">Posted: {{ job.open_date[:10] }}</span>
-                {% endif %}
-            </div>
-            {% if match.matched_skills %}
-            <div style="font-size:0.75rem; margin-bottom:0.25rem;">
-                <span class="text-dim">Skills:</span>
-                {% for s in match.matched_skills[:6] %}
-                <span style="color:var(--green); font-size:0.7rem;">{{ s }}</span>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-                {% if match.matched_skills|length > 6 %}
-                <span class="text-dim">(+{{ match.matched_skills|length - 6 }})</span>
-                {% endif %}
-            </div>
+<div class="card job-card animate-in">
+    <div style="flex:1; min-width:0;">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.2rem; flex-wrap:wrap;">
+            <span class="job-title">{{ job.title }}</span>
+            <span class="score-badge {% if match.total_score >= 70 %}score-high{% elif match.total_score >= 40 %}score-mid{% else %}score-low{% endif %}">
+                {{ "%.1f"|format(match.total_score) }}
+            </span>
+        </div>
+        <div class="job-meta">
+            {{ job.organization }}{% if job.department %} &middot; {{ job.department }}{% endif %} &middot; {{ job.location }}
+            {% if job.salary_min != 'N/A' %} &middot; <span class="text-green">${{ job.salary_min }} &ndash; ${{ job.salary_max }}</span>{% endif %}
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.4rem; align-items:center;">
+            <span class="tag tag-source">{{ job.source }}</span>
+            {% if job.open_date != 'N/A' %}
+            <span class="text-muted" style="font-size:0.68rem;">{{ job.open_date[:10] }}</span>
             {% endif %}
         </div>
-        <a href="{{ job.url }}" target="_blank" class="btn btn-sm" style="white-space:nowrap; margin-left:1rem;">Apply →</a>
+        {% if match.matched_skills %}
+        <div class="job-skills">
+            {% for s in match.matched_skills[:6] %}
+            <span class="tag tag-skill">{{ s }}</span>
+            {% endfor %}
+            {% if match.matched_skills|length > 6 %}
+            <span class="text-muted" style="font-size:0.68rem;">+{{ match.matched_skills|length - 6 }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
+    <a href="{{ job.url }}" target="_blank" class="btn btn-sm btn-ghost" style="flex-shrink:0;">Apply &rarr;</a>
 </div>
 {% else %}
 <div class="card" style="text-align:center; padding:3rem;">
-    <p class="text-dim">
+    <p class="text-muted" style="font-size:0.88rem;">
         {% if not has_profile %}
-        <a href="/profile/setup" class="text-accent">Set up your profile</a> to see matched jobs.
+        <a href="/profile/setup" class="text-cyan" style="text-decoration:none;">Set up your profile</a> to see matched jobs.
         {% else %}
-        No jobs match your filters. Try broadening your search.
+        No jobs match your filters.
         {% endif %}
     </p>
 </div>
 {% endfor %}
 
-<!-- Pagination -->
 {% if total > page_size %}
-<div style="display:flex; justify-content:center; gap:0.5rem; margin-top:1.5rem;">
+<div class="pagination">
     {% if page > 1 %}
-    <a href="?page={{ page - 1 }}&source={{ current_source }}&min_score={{ current_min_score }}&sort={{ current_sort }}" class="btn btn-sm">← Prev</a>
+    <a href="?page={{ page - 1 }}&source={{ current_source }}&min_score={{ current_min_score }}&sort={{ current_sort }}" class="btn btn-sm">&larr; Prev</a>
     {% endif %}
-    <span class="text-dim" style="padding:0.25rem 0.5rem; font-size:0.85rem;">Page {{ page }} of {{ total_pages }}</span>
+    <span class="text-dim">{{ page }} / {{ total_pages }}</span>
     {% if page < total_pages %}
-    <a href="?page={{ page + 1 }}&source={{ current_source }}&min_score={{ current_min_score }}&sort={{ current_sort }}" class="btn btn-sm">Next →</a>
+    <a href="?page={{ page + 1 }}&source={{ current_source }}&min_score={{ current_min_score }}&sort={{ current_sort }}" class="btn btn-sm">Next &rarr;</a>
     {% endif %}
 </div>
 {% endif %}

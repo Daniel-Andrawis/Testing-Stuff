@@ -35,7 +35,7 @@ class JobicyScraper(BaseScraper):
                     organization=item.get("companyName", "N/A"),
                     url=item.get("url", "N/A"),
                     description=item.get("jobDescription", ""),
-                    qualifications=item.get("jobIndustry", ""),
+                    qualifications=", ".join(item["jobIndustry"]) if isinstance(item.get("jobIndustry"), list) else str(item.get("jobIndustry", "")),
                     salary_min=item.get("annualSalaryMin", "N/A"),
                     salary_max=item.get("annualSalaryMax", "N/A"),
                     open_date=item.get("pubDate", "N/A"),
