@@ -8,6 +8,7 @@ from pathlib import Path
 import requests
 
 OLLAMA_MODEL = "qwen2.5:0.5b"
+# Will try this first, fall back to regex if output is bad
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
 
@@ -110,7 +111,73 @@ JSON:"""
     if not isinstance(result["work_history"], list):
         result["work_history"] = []
 
+    # Post-process: clean up common LLM mistakes
+    result["education"] = _clean_education(result["education"], text)
+    result["work_history"] = _clean_work_history(result["work_history"])
+
     return result
+
+
+def _clean_education(edu: dict, original_text: str) -> dict:
+    """Fix LLM education extraction mistakes."""
+    if not edu:
+        return edu
+
+    # If major contains city/state/honors/school info, strip it
+    major = edu.get("major", "")
+    if major:
+        # Remove state abbreviations, city names, honors
+        junk_patterns = [
+            r',?\s*(ny|ca|tx|va|dc|md|fl|il|pa|oh|ga|nc|nj|ma|wa|co|az|or|mn)\b',
+            r',?\s*magna\s*cum\s*laude',
+            r',?\s*summa\s*cum\s*laude',
+            r',?\s*cum\s*laude',
+            r',?\s*state\s+university.*$',
+            r',?\s*university.*$',
+            r',?\s*college.*$',
+            r',?\s*\d{4}.*$',
+            r',?\s*gpa.*$',
+        ]
+        for p in junk_patterns:
+            major = re.sub(p, '', major, flags=re.IGNORECASE).strip()
+        major = major.strip(', ')
+        edu["major"] = major
+
+    # Try to find school from original text if missing
+    if not edu.get("school"):
+        school_match = re.search(
+            r'((?:University|College|Institute)\s+(?:of|at)\s+[A-Za-z\s,]+?)(?:\s*\n|\s+\d{4}|\s+bachelor|\s+master|\s+magna)',
+            original_text, re.IGNORECASE
+        )
+        if school_match:
+            edu["school"] = school_match.group(1).strip().rstrip(",. ")
+
+    return edu
+
+
+def _clean_work_history(work: list) -> list:
+    """Fix LLM work history extraction mistakes."""
+    cleaned = []
+    for entry in work:
+        if not isinstance(entry, dict):
+            continue
+        title = entry.get("title", "").strip()
+        company = entry.get("company", "").strip()
+
+        # If company looks like a location (city, state), swap title/company
+        if company and re.match(r'^[A-Z][a-z]+,\s*[A-Z]{2}$', company):
+            # company is actually a location — title might be the company
+            # Try to find a real title in the description
+            entry["location"] = company
+            entry["company"] = title
+            entry["title"] = ""
+
+        # Skip empty entries
+        if not title and not company:
+            continue
+
+        cleaned.append(entry)
+    return cleaned
 
 
 def _ensure_list(val) -> list:

@@ -7,9 +7,10 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session
-from app.models import Job, Profile, MatchResult
+from app.models import Job, Profile, MatchResult, User
 from app.scrapers.registry import get_all_scrapers, get_scraper
 from app.services.matcher import score_job
+from app.mail import send_job_alert
 
 
 async def run_all_scrapers():
@@ -100,8 +101,11 @@ async def mark_stale_jobs(days: int = 7):
         await session.commit()
 
 
-async def recompute_all_matches():
-    """Recompute match scores for all users with profiles against all active jobs."""
+async def recompute_all_matches(send_alerts: bool = True):
+    """Recompute match scores for all users with profiles against all active jobs.
+    Optionally sends email alerts for new high-scoring matches."""
+    alert_threshold = 40  # notify on matches >= this score
+
     async with async_session() as session:
         profiles = (await session.execute(select(Profile))).scalars().all()
         if not profiles:
@@ -123,11 +127,19 @@ async def recompute_all_matches():
                 "years_experience": profile.years_experience or 0,
             }
 
-            # Delete old matches for this user
+            # Get existing matched job IDs before deleting
+            old_job_ids = set()
+            if send_alerts:
+                old_result = await session.execute(
+                    select(MatchResult.job_id).where(MatchResult.user_id == str(profile.user_id))
+                )
+                old_job_ids = {r[0] for r in old_result.all()}
+
             await session.execute(
                 delete(MatchResult).where(MatchResult.user_id == str(profile.user_id))
             )
 
+            new_high_matches = []
             for job in active_jobs:
                 job_dict = {
                     "title": job.title,
@@ -150,7 +162,31 @@ async def recompute_all_matches():
                 )
                 session.add(match)
 
+                # Track new high-scoring matches
+                if send_alerts and job.id not in old_job_ids and score_info["total_score"] >= alert_threshold:
+                    new_high_matches.append({
+                        "title": job.title,
+                        "organization": job.organization,
+                        "location": job.location,
+                        "url": job.url,
+                        "score": score_info["total_score"],
+                    })
+
             await session.commit()
+
+            # Send email alert if there are new high matches
+            if send_alerts and new_high_matches:
+                user_result = await session.execute(
+                    select(User).where(User.id == profile.user_id)
+                )
+                user = user_result.scalar_one_or_none()
+                if user:
+                    new_high_matches.sort(key=lambda x: x["score"], reverse=True)
+                    try:
+                        send_job_alert(user.email, new_high_matches)
+                        print(f"[scheduler] Sent alert to {user.email}: {len(new_high_matches)} new matches")
+                    except Exception as e:
+                        print(f"[scheduler] Failed to send alert to {user.email}: {e}")
 
     print(f"[scheduler] Recomputed matches for {len(profiles)} profiles against {len(active_jobs)} jobs")
 

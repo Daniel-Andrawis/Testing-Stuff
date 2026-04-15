@@ -101,9 +101,10 @@
         <div class="card animate-in">
             <h3 style="margin-bottom:0.6rem; font-size:0.85rem;">Quick Scrape</h3>
             <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/spacex" hx-swap="none" hx-on::after-request="location.reload()">SpaceX</button>
+                <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/crowdstrike" hx-swap="none" hx-on::after-request="location.reload()">CrowdStrike</button>
                 <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/usajobs" hx-swap="none" hx-on::after-request="location.reload()">USAJobs</button>
                 <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/remoteok" hx-swap="none" hx-on::after-request="location.reload()">RemoteOK</button>
-                <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/indeed" hx-swap="none" hx-on::after-request="location.reload()">Indeed</button>
                 <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/jobicy" hx-swap="none" hx-on::after-request="location.reload()">Jobicy</button>
             </div>
         </div>

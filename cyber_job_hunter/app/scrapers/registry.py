@@ -3,6 +3,8 @@ from app.scrapers.indeed import IndeedScraper
 from app.scrapers.remoteok import RemoteOKScraper
 from app.scrapers.jobicy import JobicyScraper
 from app.scrapers.themuse import TheMuseScraper
+from app.scrapers.spacex import SpaceXScraper
+from app.scrapers.crowdstrike import CrowdStrikeScraper
 
 _SCRAPERS = {
     "usajobs": USAJobsScraper(),
@@ -10,6 +12,8 @@ _SCRAPERS = {
     "remoteok": RemoteOKScraper(),
     "jobicy": JobicyScraper(),
     "themuse": TheMuseScraper(),
+    "spacex": SpaceXScraper(),
+    "crowdstrike": CrowdStrikeScraper(),
 }
 
 
