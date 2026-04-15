@@ -1,4 +1,20 @@
-"""Resume-to-job matching engine adapted for web app use."""
+"""
+Resume-to-job matching engine.
+
+Score = weighted sum of category scores, each 0-100:
+
+  Category             Weight   How it's calculated
+  ─────────────────────────────────────────────────────────────
+  Skill Match          40%      (matched / total_your_skills) * 100, scaled by relevance
+  Experience Keywords  25%      (matched / total_your_keywords) * 100
+  Certifications       15%      Exact + alias match against job text
+  Education            10%      Degree level match + field relevance
+  Target Org           5%       Binary: is this a company you're targeting?
+  Language Bonus       5%       Binary: does the job mention your languages?
+
+Each category uses a ratio of YOUR profile items found in the job text.
+More matches = higher score. No free floors — if nothing matches, it's 0.
+"""
 
 import re
 
@@ -7,18 +23,10 @@ def _normalize(text):
     return re.sub(r"\s+", " ", text.lower().strip())
 
 
-def _count_matches(needles, haystack):
-    haystack_lower = haystack.lower()
-    return sum(1 for n in needles if n.lower() in haystack_lower)
-
-
 def score_job(job: dict, profile: dict) -> dict:
-    """
-    Score a job dict against a user profile dict.
+    """Score a job against a user profile. Returns score 0-100 with breakdown."""
 
-    Profile expected keys: skills, experience_keywords, certifications,
-    education, target_companies, languages, years_experience
-    """
+    # Combine all searchable job text
     fields = []
     for key in ("title", "description", "qualifications", "organization", "department"):
         val = job.get(key, "")
@@ -26,69 +34,106 @@ def score_job(job: dict, profile: dict) -> dict:
             val = " ".join(str(v) for v in val)
         fields.append(str(val))
     job_text = " ".join(fields)
-    job_text_lower = _normalize(job_text)
+    job_lower = _normalize(job_text)
 
-    # --- Skill matches (35%) ---
+    # ── Skills (40%) ──
+    # What % of your skills appear in this job?
     skills = profile.get("skills", [])
-    matched_skills = [s for s in skills if s.lower() in job_text_lower]
-    skill_score = min(len(matched_skills) / max(len(skills) * 0.15, 1), 1.0) * 100
+    matched_skills = [s for s in skills if s.lower() in job_lower]
+    if skills:
+        skill_ratio = len(matched_skills) / len(skills)
+        # Scale: 0 matches = 0, matching 30%+ of your skills = 100
+        skill_score = min(skill_ratio / 0.30, 1.0) * 100
+    else:
+        skill_score = 0
 
-    # --- Experience keyword matches (25%) ---
+    # ── Experience Keywords (25%) ──
+    # What % of your experience keywords appear?
     exp_keywords = profile.get("experience_keywords", [])
-    matched_keywords = [k for k in exp_keywords if k.lower() in job_text_lower]
-    keyword_score = min(len(matched_keywords) / max(len(exp_keywords) * 0.12, 1), 1.0) * 100
+    matched_keywords = [k for k in exp_keywords if k.lower() in job_lower]
+    if exp_keywords:
+        kw_ratio = len(matched_keywords) / len(exp_keywords)
+        # Scale: matching 25%+ of keywords = 100
+        keyword_score = min(kw_ratio / 0.25, 1.0) * 100
+    else:
+        keyword_score = 0
 
-    # --- Certification matches (15%) ---
+    # ── Certifications (15%) ──
+    # Check each cert with aliases for fuzzy matching
     certs = profile.get("certifications", [])
     cert_aliases = {
-        "CompTIA Security+": ["security+", "sec+", "comptia", "certification"],
-        "CISSP": ["cissp", "certified information systems"],
+        "CompTIA Security+": ["security+", "sec+", "comptia"],
+        "Belkasoft IOS Forensics": ["belkasoft", "ios forensics", "mobile forensics"],
+        "Tines Core Certification": ["tines", "soar", "automation"],
+        "Tines Advanced Certification": ["tines", "soar", "orchestration"],
+        "CISSP": ["cissp", "certified information systems security"],
         "CEH": ["ceh", "certified ethical hacker"],
         "OSCP": ["oscp", "offensive security"],
         "GIAC": ["giac", "sans"],
+        "GCIH": ["gcih"],
+        "CCNA": ["ccna", "cisco certified"],
     }
     matched_certs = 0
     for cert in certs:
         aliases = cert_aliases.get(cert, [cert.lower()])
-        if any(a.lower() in job_text_lower for a in aliases):
+        if any(a in job_lower for a in aliases):
             matched_certs += 1
-    cert_score = min(matched_certs / max(len(certs), 1), 1.0) * 100
-    if matched_certs == 0:
-        generic = ["certification", "certified", "clearance"]
-        if any(t in job_text_lower for t in generic):
-            cert_score = 30
+    if certs:
+        cert_score = (matched_certs / len(certs)) * 100
+    else:
+        cert_score = 0
 
-    # --- Education (10%) ---
+    # ── Education (10%) ──
+    # Does the job mention your degree field?
     edu = profile.get("education", {})
-    edu_terms = [
-        edu.get("major", "").lower(),
-        edu.get("minor", "").lower(),
-        "bachelor", "b.s.", "bs", "degree",
-        "computer science", "information technology", "information security",
-    ]
-    edu_terms = [t for t in edu_terms if t]
-    edu_matches = _count_matches(edu_terms, job_text)
-    edu_score = min(edu_matches / 2, 1.0) * 100
+    edu_score = 0
+    edu_terms = []
+    if edu.get("major"):
+        edu_terms.append(edu["major"].lower())
+    if edu.get("minor"):
+        edu_terms.append(edu["minor"].lower())
 
-    # --- Target org (10%) ---
+    # Check if job mentions your field
+    field_match = any(t in job_lower for t in edu_terms if t)
+
+    # Check degree level
+    degree_terms = ["bachelor", "b.s.", "master", "m.s.", "degree", "bs", "ms"]
+    degree_match = any(t in job_lower for t in degree_terms)
+
+    # Related field terms
+    related_fields = ["computer science", "information technology", "information security",
+                      "cybersecurity", "information systems"]
+    related_match = any(t in job_lower for t in related_fields)
+
+    if field_match and degree_match:
+        edu_score = 100
+    elif field_match or (degree_match and related_match):
+        edu_score = 70
+    elif degree_match or related_match:
+        edu_score = 40
+    # else 0
+
+    # ── Target Organization (5%) ──
     org_name = _normalize(job.get("organization", ""))
     dept_name = _normalize(job.get("department", ""))
     targets = [c.lower() for c in profile.get("target_companies", [])]
-    org_match = any(t in org_name or t in dept_name for t in targets)
-    org_score = 100 if org_match else 50
+    org_match = any(t in org_name or t in dept_name for t in targets) if targets else False
+    org_score = 100 if org_match else 0
 
-    # --- Language bonus (5%) ---
+    # ── Language Bonus (5%) ──
     languages = profile.get("languages", [])
-    lang_terms = [l.lower() for l in languages] + ["bilingual", "foreign language"]
-    lang_matches = _count_matches(lang_terms, job_text)
-    lang_score = min(lang_matches, 1) * 100
+    lang_terms = [l.lower() for l in languages if l.lower() != "english"]
+    lang_terms += ["bilingual", "foreign language"]
+    lang_match = any(t in job_lower for t in lang_terms)
+    lang_score = 100 if lang_match else 0
 
+    # ── Weighted Total ──
     total = (
-        skill_score * 0.35
+        skill_score * 0.40
         + keyword_score * 0.25
         + cert_score * 0.15
         + edu_score * 0.10
-        + org_score * 0.10
+        + org_score * 0.05
         + lang_score * 0.05
     )
 
@@ -110,9 +155,10 @@ def score_job(job: dict, profile: dict) -> dict:
 def compute_skill_gaps(jobs: list[dict], profile_skills: list[str], top_n: int = 10) -> list[str]:
     """Find skills frequently in jobs but missing from the user's profile."""
     import json
-    skill_master_path = "data/skills_master.json"
+    from pathlib import Path
+    skills_path = Path(__file__).resolve().parent.parent.parent / "data" / "skills_master.json"
     try:
-        with open(skill_master_path) as f:
+        with open(skills_path) as f:
             all_skills = json.load(f)
     except FileNotFoundError:
         return []

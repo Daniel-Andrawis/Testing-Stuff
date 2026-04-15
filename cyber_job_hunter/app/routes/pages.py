@@ -223,21 +223,38 @@ async def profile_setup_submit(
     request: Request,
     user=Depends(current_active_user),
     session: AsyncSession = Depends(get_session),
-    name: str = Form(""),
-    skills: str = Form(""),
-    certifications: str = Form(""),
-    experience_keywords: str = Form(""),
-    edu_degree: str = Form(""),
-    edu_major: str = Form(""),
-    edu_minor: str = Form(""),
-    edu_school: str = Form(""),
-    years_experience: int = Form(0),
-    languages: str = Form(""),
-    clearance_eligible: bool = Form(False),
-    target_companies: str = Form(""),
 ):
     import uuid
     uid = str(user.id)
+    form = await request.form()
+
+    name = form.get("name", "")
+    skills = form.get("skills", "")
+    certifications = form.get("certifications", "")
+    experience_keywords = form.get("experience_keywords", "")
+    edu_degree = form.get("edu_degree", "")
+    edu_major = form.get("edu_major", "")
+    edu_minor = form.get("edu_minor", "")
+    edu_school = form.get("edu_school", "")
+    years_experience = int(form.get("years_experience", 0) or 0)
+    languages = form.get("languages", "")
+    clearance_eligible = form.get("clearance_eligible") == "true"
+    target_companies = form.get("target_companies", "")
+
+    # Work history — multiple entries with same field names
+    work_titles = form.getlist("work_title")
+    work_companies = form.getlist("work_company")
+    work_durations = form.getlist("work_duration")
+    work_descriptions = form.getlist("work_description")
+    work_history = []
+    for i in range(len(work_titles)):
+        if work_titles[i].strip() or work_companies[i].strip():
+            work_history.append({
+                "title": work_titles[i].strip() if i < len(work_titles) else "",
+                "company": work_companies[i].strip() if i < len(work_companies) else "",
+                "duration": work_durations[i].strip() if i < len(work_durations) else "",
+                "description": work_descriptions[i].strip() if i < len(work_descriptions) else "",
+            })
 
     existing = (await session.execute(
         select(Profile).where(Profile.user_id == uid)
@@ -255,6 +272,7 @@ async def profile_setup_submit(
         existing.skills = skills_list
         existing.certifications = certs_list
         existing.experience_keywords = keywords_list
+        existing.work_history = work_history
         existing.education = education
         existing.years_experience = years_experience
         existing.languages = langs_list
@@ -268,6 +286,7 @@ async def profile_setup_submit(
             skills=skills_list,
             certifications=certs_list,
             experience_keywords=keywords_list,
+            work_history=work_history,
             education=education,
             years_experience=years_experience,
             languages=langs_list,

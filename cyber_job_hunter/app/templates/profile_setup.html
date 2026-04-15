@@ -8,17 +8,15 @@
     </div>
     <p class="text-dim mb-2" style="font-size:0.88rem;">{% if profile %}Update your skills and experience.{% else %}Build your profile to start matching against jobs.{% endif %}</p>
 
-    {% if not profile %}
     <div class="card mb-2" style="border-color: var(--cyan-dim);">
-        <h3 style="margin-bottom:0.4rem; font-size:0.88rem;">Quick Start: Upload Resume</h3>
-        <p class="text-muted" style="font-size:0.78rem; margin-bottom:0.75rem;">Upload a PDF or DOCX to auto-fill the form.</p>
+        <h3 style="margin-bottom:0.4rem; font-size:0.88rem;">{% if profile %}Re-upload Resume{% else %}Quick Start: Upload Resume{% endif %}</h3>
+        <p class="text-muted" style="font-size:0.78rem; margin-bottom:0.75rem;">Upload a PDF or DOCX — we'll use AI to extract your skills, experience, and education.</p>
         <form id="upload-form" enctype="multipart/form-data" style="display:flex; gap:0.5rem; align-items:center;">
             <input type="file" name="file" accept=".pdf,.docx,.doc" class="form-input" style="flex:1;">
             <button type="submit" class="btn btn-sm btn-primary">Parse</button>
         </form>
         <div id="upload-status" class="text-muted" style="font-size:0.78rem; margin-top:0.5rem; font-family:var(--font-mono);"></div>
     </div>
-    {% endif %}
 
     <form method="POST" action="/profile/setup" class="card">
         <div class="form-group">
@@ -41,8 +39,31 @@
                    placeholder="CompTIA Security+, CISSP, CEH...">
         </div>
 
+        <!-- Work History -->
         <div class="form-group">
-            <label for="experience_keywords">Experience Keywords</label>
+            <label>Work Experience</label>
+            <div id="work-history-container">
+                {% if profile and profile.work_history %}
+                    {% for job in profile.work_history %}
+                    <div class="work-entry" style="background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--radius); padding:0.75rem; margin-bottom:0.5rem;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
+                            <input type="text" name="work_title" class="form-input" placeholder="Job Title" value="{{ job.title if job.title else '' }}" style="font-size:0.82rem;">
+                            <input type="text" name="work_company" class="form-input" placeholder="Company" value="{{ job.company if job.company else '' }}" style="font-size:0.82rem;">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr auto; gap:0.5rem;">
+                            <input type="text" name="work_duration" class="form-input" placeholder="Jun 2024 - Present" value="{{ job.duration if job.duration else '' }}" style="font-size:0.82rem;">
+                            <button type="button" class="btn btn-sm remove-work-btn" style="color:var(--red);">&times;</button>
+                        </div>
+                        <textarea name="work_description" class="form-input" placeholder="Brief description of role..." rows="2" style="font-size:0.82rem; margin-top:0.5rem; resize:vertical;">{{ job.description if job.description else '' }}</textarea>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <button type="button" id="add-work-btn" class="btn btn-sm btn-ghost" style="width:100%; margin-top:0.25rem;">+ Add Position</button>
+        </div>
+
+        <div class="form-group">
+            <label for="experience_keywords">Experience Keywords <span class="text-muted" style="text-transform:none; letter-spacing:0;">(auto-filled from resume)</span></label>
             <input type="text" id="experience_keywords" name="experience_keywords" class="form-input"
                    value="{{ ', '.join(profile.experience_keywords) if profile and profile.experience_keywords else '' }}"
                    placeholder="threat detection, incident response, SIEM, EDR...">
@@ -108,6 +129,54 @@
 </div>
 
 <script>
+function createWorkEntry(title, company, duration, description) {
+    const entry = document.createElement('div');
+    entry.className = 'work-entry';
+    entry.style.cssText = 'background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--radius); padding:0.75rem; margin-bottom:0.5rem;';
+
+    const row1 = document.createElement('div');
+    row1.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;';
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text'; titleInput.name = 'work_title'; titleInput.className = 'form-input';
+    titleInput.placeholder = 'Job Title'; titleInput.value = title || ''; titleInput.style.fontSize = '0.82rem';
+    const companyInput = document.createElement('input');
+    companyInput.type = 'text'; companyInput.name = 'work_company'; companyInput.className = 'form-input';
+    companyInput.placeholder = 'Company'; companyInput.value = company || ''; companyInput.style.fontSize = '0.82rem';
+    row1.appendChild(titleInput);
+    row1.appendChild(companyInput);
+
+    const row2 = document.createElement('div');
+    row2.style.cssText = 'display:grid; grid-template-columns:1fr auto; gap:0.5rem;';
+    const durInput = document.createElement('input');
+    durInput.type = 'text'; durInput.name = 'work_duration'; durInput.className = 'form-input';
+    durInput.placeholder = 'Jun 2024 - Present'; durInput.value = duration || ''; durInput.style.fontSize = '0.82rem';
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button'; removeBtn.className = 'btn btn-sm';
+    removeBtn.style.color = 'var(--red)'; removeBtn.textContent = '\u00D7';
+    removeBtn.addEventListener('click', function() { entry.remove(); });
+    row2.appendChild(durInput);
+    row2.appendChild(removeBtn);
+
+    const descArea = document.createElement('textarea');
+    descArea.name = 'work_description'; descArea.className = 'form-input';
+    descArea.placeholder = 'Brief description of role...'; descArea.rows = 2;
+    descArea.style.cssText = 'font-size:0.82rem; margin-top:0.5rem; resize:vertical;';
+    descArea.value = description || '';
+
+    entry.appendChild(row1);
+    entry.appendChild(row2);
+    entry.appendChild(descArea);
+    return entry;
+}
+
+document.getElementById('add-work-btn').addEventListener('click', function() {
+    document.getElementById('work-history-container').appendChild(createWorkEntry());
+});
+
+document.querySelectorAll('.remove-work-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { this.closest('.work-entry').remove(); });
+});
+
 const uploadForm = document.getElementById('upload-form');
 if (uploadForm) {
     uploadForm.addEventListener('submit', async function(e) {
@@ -115,19 +184,33 @@ if (uploadForm) {
         const status = document.getElementById('upload-status');
         const fileInput = this.querySelector('input[type="file"]');
         if (!fileInput.files.length) { status.textContent = '> select a file first'; return; }
-        status.textContent = '> parsing resume...';
+        status.textContent = '> parsing resume with AI...';
         status.style.color = 'var(--amber)';
         const fd = new FormData();
         fd.append('file', fileInput.files[0]);
         const resp = await fetch('/api/parse-resume', { method: 'POST', body: fd });
         if (!resp.ok) { status.textContent = '> parse failed — fill in manually'; status.style.color = 'var(--red)'; return; }
         const data = await resp.json();
-        if (data.skills?.length) document.getElementById('skills').value = data.skills.join(', ');
-        if (data.certifications?.length) document.getElementById('certifications').value = data.certifications.join(', ');
-        if (data.experience_keywords?.length) document.getElementById('experience_keywords').value = data.experience_keywords.join(', ');
-        if (data.education?.degree) document.getElementById('edu_degree').value = data.education.degree;
-        if (data.education?.major) document.getElementById('edu_major').value = data.education.major;
-        status.textContent = '> parsed — review and save below';
+
+        if (data.skills && data.skills.length) document.getElementById('skills').value = data.skills.join(', ');
+        if (data.certifications && data.certifications.length) document.getElementById('certifications').value = data.certifications.join(', ');
+        if (data.experience_keywords && data.experience_keywords.length) document.getElementById('experience_keywords').value = data.experience_keywords.join(', ');
+        if (data.education && data.education.degree) document.getElementById('edu_degree').value = data.education.degree;
+        if (data.education && data.education.major) document.getElementById('edu_major').value = data.education.major;
+        if (data.education && data.education.minor) document.getElementById('edu_minor').value = data.education.minor;
+        if (data.education && data.education.school) document.getElementById('edu_school').value = data.education.school;
+
+        if (data.work_history && data.work_history.length) {
+            const container = document.getElementById('work-history-container');
+            while (container.firstChild) { container.removeChild(container.firstChild); }
+            for (const job of data.work_history) {
+                container.appendChild(createWorkEntry(job.title, job.company, job.duration, job.description));
+            }
+        }
+
+        const skillCount = data.skills ? data.skills.length : 0;
+        const jobCount = data.work_history ? data.work_history.length : 0;
+        status.textContent = '> parsed ' + skillCount + ' skills, ' + jobCount + ' positions — review and save';
         status.style.color = 'var(--green)';
     });
 }

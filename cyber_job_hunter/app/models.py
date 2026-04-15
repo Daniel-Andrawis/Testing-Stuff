@@ -28,6 +28,7 @@ class Profile(Base):
     certifications = Column(SQLiteJSON, default=list)
     skills = Column(SQLiteJSON, default=list)
     experience_keywords = Column(SQLiteJSON, default=list)
+    work_history = Column(SQLiteJSON, default=list)  # [{title, company, duration, description}]
     years_experience = Column(Integer, default=0)
     languages = Column(SQLiteJSON, default=list)
     clearance_eligible = Column(Boolean, default=False)
