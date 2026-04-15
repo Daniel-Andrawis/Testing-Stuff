@@ -2,23 +2,111 @@
 {% block title %}Dashboard — CyberRank{% endblock %}
 
 {% block content %}
-<h1 style="font-size:1.5rem; margin-bottom:0.5rem;">Welcome, {{ user.email }}</h1>
-<p class="text-dim">Your CyberRank portal. Full dashboard coming in Phase 2.</p>
-
-<div class="stats-grid mt-2">
-    <div class="card stat-card">
-        <div class="stat-label">Match Score</div>
-        <div class="stat-value text-dim">—</div>
-        <div class="stat-sub">Complete your profile to see scores</div>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+        <h1 style="font-size:1.5rem; margin-bottom:0.25rem;">Your Portal</h1>
+        <p class="text-dim" style="font-size:0.85rem;">{{ user.email }}</p>
     </div>
-    <div class="card stat-card">
-        <div class="stat-label">Jobs Tracked</div>
-        <div class="stat-value text-dim">0</div>
-        <div class="stat-sub">Jobs load after first scrape</div>
+    <div class="flex gap-1">
+        <button class="btn btn-sm" hx-post="/api/scrape/remoteok" hx-swap="none" hx-on::after-request="location.reload()">Refresh Jobs</button>
+        <a href="/api/export/csv" class="btn btn-sm">Export CSV</a>
+        <a href="/profile" class="btn btn-sm">Edit Profile</a>
     </div>
 </div>
 
-<div class="mt-2">
-    <a href="/profile/setup" class="btn btn-primary">Set Up Profile</a>
+<!-- Stats Row -->
+<div class="stats-grid" style="margin-bottom:1.5rem;">
+    <div class="card stat-card">
+        <div class="stat-label">Avg Match Score</div>
+        <div class="stat-value {% if avg_score >= 70 %}text-green{% elif avg_score >= 40 %}{% else %}text-dim{% endif %}">
+            {{ "%.1f"|format(avg_score) if avg_score else "—" }}
+        </div>
+        <div class="stat-sub">across {{ total_jobs }} jobs</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-label">Strong Matches</div>
+        <div class="stat-value text-accent">{{ strong_count }}</div>
+        <div class="stat-sub">score 70+</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-label">Jobs Tracked</div>
+        <div class="stat-value">{{ total_jobs }}</div>
+        <div class="stat-sub">from {{ source_count }} sources</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-label">Profile</div>
+        <div class="stat-value {% if has_profile %}text-green{% else %}{% endif %}">
+            {% if has_profile %}Active{% else %}—{% endif %}
+        </div>
+        <div class="stat-sub">{% if not has_profile %}<a href="/profile/setup" class="text-accent">Set up now</a>{% else %}{{ skill_count }} skills{% endif %}</div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:2fr 1fr; gap:1rem;">
+    <!-- Top Matches -->
+    <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:0.875rem 1rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:600; font-size:0.9rem;">Top Matches</span>
+            <a href="/jobs" class="text-accent" style="font-size:0.8rem; text-decoration:none;">View all →</a>
+        </div>
+        {% for match, job in top_matches %}
+        <div style="padding:0.75rem 1rem; border-bottom:1px solid var(--bg); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:0.85rem; font-weight:500;">{{ job.title }}</div>
+                <div class="text-dim" style="font-size:0.75rem;">{{ job.organization }} · {{ job.location }} {% if job.salary_min != 'N/A' %}· ${{ job.salary_min }}{% endif %}</div>
+            </div>
+            <span class="score-badge {% if match.total_score >= 70 %}score-high{% elif match.total_score >= 40 %}score-mid{% else %}score-low{% endif %}">
+                {{ "%.1f"|format(match.total_score) }}
+            </span>
+        </div>
+        {% else %}
+        <div style="padding:2rem; text-align:center;" class="text-dim">
+            {% if not has_profile %}
+            <a href="/profile/setup" class="text-accent">Set up your profile</a> to see matches
+            {% else %}
+            No jobs yet. Click "Refresh Jobs" to scrape job boards.
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Sidebar -->
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+        <!-- Skill Gaps -->
+        <div class="card">
+            <div style="font-weight:600; font-size:0.9rem; margin-bottom:0.75rem;">Top Skill Gaps</div>
+            <div class="text-dim" style="font-size:0.75rem; margin-bottom:0.5rem;">Frequently requested but missing from your profile</div>
+            <div style="display:flex; flex-wrap:wrap; gap:0.375rem;">
+                {% for skill in skill_gaps %}
+                <span style="background:#7f1d1d; color:#fca5a5; padding:2px 8px; border-radius:10px; font-size:0.7rem;">{{ skill }}</span>
+                {% else %}
+                <span class="text-dim" style="font-size:0.8rem;">{% if has_profile %}No gaps detected{% else %}Set up profile first{% endif %}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Job Sources -->
+        <div class="card">
+            <div style="font-weight:600; font-size:0.9rem; margin-bottom:0.75rem;">Job Sources</div>
+            {% for source, count in source_breakdown %}
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.25rem;">
+                <span class="text-dim">{{ source }}</span>
+                <span class="text-green">{{ count }} jobs</span>
+            </div>
+            {% else %}
+            <span class="text-dim" style="font-size:0.8rem;">No jobs loaded yet</span>
+            {% endfor %}
+        </div>
+
+        <!-- Quick Scrape -->
+        <div class="card">
+            <div style="font-weight:600; font-size:0.9rem; margin-bottom:0.75rem;">Quick Scrape</div>
+            <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/usajobs" hx-swap="none" hx-on::after-request="location.reload()">USAJobs (Federal)</button>
+                <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/remoteok" hx-swap="none" hx-on::after-request="location.reload()">RemoteOK</button>
+                <button class="btn btn-sm" style="width:100%;" hx-post="/api/scrape/indeed" hx-swap="none" hx-on::after-request="location.reload()">Indeed</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

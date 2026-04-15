@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Try It — CyberRank{% endblock %}
+
+{% block content %}
+<div style="max-width:700px; margin:0 auto;">
+    <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">See How You Stack Up</h1>
+    <p class="text-dim mb-2">Enter your skills and see how you match against live cybersecurity job listings. No account needed.</p>
+
+    <form method="POST" action="/try" class="card mb-2">
+        <div class="form-group">
+            <label for="skills">Your Skills (comma-separated)</label>
+            <input type="text" id="skills" name="skills" class="form-input"
+                   value="{{ input_skills if input_skills else '' }}"
+                   placeholder="Python, SIEM, CrowdStrike, Incident Response, NIST..."
+                   required>
+        </div>
+        <div class="form-group">
+            <label for="certifications">Certifications (comma-separated, optional)</label>
+            <input type="text" id="certifications" name="certifications" class="form-input"
+                   value="{{ input_certs if input_certs else '' }}"
+                   placeholder="CompTIA Security+, CISSP...">
+        </div>
+        <div class="form-group">
+            <label for="edu_major">Field of Study (optional)</label>
+            <input type="text" id="edu_major" name="edu_major" class="form-input"
+                   value="{{ input_major if input_major else '' }}"
+                   placeholder="Digital Forensics, Computer Science...">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Match Me</button>
+    </form>
+
+    {% if results is not none %}
+    <h2 style="font-size:1.2rem; margin-bottom:1rem;">Top {{ results|length }} Matches</h2>
+    {% for job, score_info in results %}
+    <div class="card" style="margin-bottom:0.75rem; padding:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+                    <span style="font-weight:600; font-size:0.95rem;">{{ job.title }}</span>
+                    <span class="score-badge {% if score_info.total_score >= 70 %}score-high{% elif score_info.total_score >= 40 %}score-mid{% else %}score-low{% endif %}">
+                        {{ "%.1f"|format(score_info.total_score) }}
+                    </span>
+                </div>
+                <div class="text-dim" style="font-size:0.8rem;">
+                    {{ job.organization }} · {{ job.location }}
+                    {% if job.salary_min != 'N/A' %} · ${{ job.salary_min }}{% endif %}
+                    <span style="background:var(--bg); padding:1px 6px; border-radius:4px; font-size:0.7rem; margin-left:0.25rem;">{{ job.source }}</span>
+                </div>
+                {% if score_info.matched_skills %}
+                <div style="font-size:0.75rem; margin-top:0.375rem;">
+                    <span class="text-dim">Matched:</span>
+                    {% for s in score_info.matched_skills[:5] %}
+                    <span style="color:var(--green);">{{ s }}</span>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <a href="{{ job.url }}" target="_blank" class="btn btn-sm" style="white-space:nowrap; margin-left:1rem;">View →</a>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if results|length == 0 %}
+    <div class="card" style="text-align:center; padding:2rem;">
+        <p class="text-dim">No jobs found. Try different skills or check back — jobs refresh every few hours.</p>
+    </div>
+    {% endif %}
+
+    <div class="card mt-2" style="text-align:center;">
+        <p style="font-size:0.9rem; margin-bottom:0.5rem;">Want to save your results and track over time?</p>
+        <a href="/register" class="btn btn-primary">Create Free Account</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
